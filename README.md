@@ -7,6 +7,12 @@
 
 ---
 
+## 🎮 Gameplay Preview
+
+![Demo](screenshots/demo.gif)
+
+---
+
 ## 📌 Overview
 
 This project is a **Flappy Bird clone** built using **Python and Pygame**.
