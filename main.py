@@ -2,6 +2,22 @@ import pygame
 import os
 import random
 import json
+import sys
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+def get_data_path(filename):
+    base_path = os.path.join(os.getenv("APPDATA"), "FlappyBirdManas")
+
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+
+    return os.path.join(base_path, filename) 
 
 pygame.mixer.init()
 pygame.font.init()
@@ -10,22 +26,22 @@ pygame.font.init()
 WIDTH, HEIGHT = 500, 800
 
 # Load sounds
-start_sound = pygame.mixer.Sound(os.path.join("assets", "start.wav"))   # Game start sound
-jump_sound = pygame.mixer.Sound(os.path.join("assets", "jump.wav"))     # Bird jump sound
-point_sound = pygame.mixer.Sound(os.path.join("assets", "point.wav"))   # Point sound
-hit_sound = pygame.mixer.Sound(os.path.join("assets", "hit.wav"))       # Collision sound
-homepage_sound = pygame.mixer.Sound(os.path.join("assets", "homepage.wav"))  # Homepage sound
-gameover_sound = pygame.mixer.Sound(os.path.join("assets", "game_over.wav"))  # Game over sound
+start_sound = pygame.mixer.Sound(resource_path(os.path.join("assets", "sounds", "start.wav")))   # Game start sound
+jump_sound = pygame.mixer.Sound(resource_path(os.path.join("assets", "sounds", "jump.wav")))     # Bird jump sound
+point_sound = pygame.mixer.Sound(resource_path(os.path.join("assets", "sounds", "point.wav")))   # Point sound
+hit_sound = pygame.mixer.Sound(resource_path(os.path.join("assets", "sounds", "hit.wav")))       # Collision sound
+homepage_sound = pygame.mixer.Sound(resource_path(os.path.join("assets", "sounds", "homepage.wav")))  # Homepage sound
+gameover_sound = pygame.mixer.Sound(resource_path(os.path.join("assets", "sounds", "game_over.wav")))  # Game over sound
 
 
 # Load images
-bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "bird1.png"))), pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "bird2.png"))), pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "bird3.png")))]
-pipe_image = pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "pipe.png")))
-base_image = pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "base.png")))
-retry_image = pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "retry.png")))
-background_image = pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "bg.png")))
-homepage_image = pygame.transform.scale(pygame.image.load(os.path.join("assets", "homepage.png")),(WIDTH, HEIGHT))
-game_over_image = pygame.transform.scale2x(pygame.image.load(os.path.join("assets", "gameover.png")))
+bird_images = [pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "bird1.png")))), pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "bird2.png")))), pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "bird3.png"))))]
+pipe_image = pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "pipe.png"))))
+base_image = pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "base.png"))))
+retry_image = pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "retry.png"))))
+background_image = pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "bg.png"))))
+homepage_image = pygame.transform.scale(pygame.image.load(resource_path(os.path.join("assets", "images", "homepage.png"))),(WIDTH, HEIGHT))
+game_over_image = pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join("assets", "images", "gameover.png"))))
 
 # Fonts
 stat_font = pygame.font.SysFont("comicsans", 30)
@@ -162,46 +178,47 @@ class Bird:
     
 # High Score Functions
 def get_high_score_list():
-    """Get all high scores from the high_scores.json file."""
-    if not os.path.exists("high_scores.json"):
-        # If the file doesn't exist, create it with an empty list
-        with open("high_scores.json", "w") as file:
+    path = get_data_path("high_scores.json")
+
+    if not os.path.exists(path):
+        with open(path, "w") as file:
             json.dump([], file)
-        return []  # Return an empty list if no file exists
-    
-    # If the file exists, read it and return the high scores
-    with open("high_scores.json", "r") as file:
+        return []
+
+    with open(path, "r") as file:
         high_scores = json.load(file)
-    
-    return sorted(high_scores, key=lambda x: x["score"], reverse=True)  # Sort by score in descending order
+
+    return sorted(high_scores, key=lambda x: x["score"], reverse=True)
+
 
 def get_high_score():
-    """Get the highest score from the high_scores.json file."""
     high_scores = get_high_score_list()
     return high_scores[0]["score"] if high_scores else 0
 
 
 def set_high_score(player_name, score):
-    try:
-        with open("high_scores.json", "r") as file:
-            high_scores = json.load(file)  # Load the list of high scores
-    except (FileNotFoundError, json.JSONDecodeError):
-        high_scores = []  # Create an empty list if file doesn't exist or is empty    
+    path = get_data_path("high_scores.json")
 
-    # Check if player already has a score in the high scores
+    try:
+        with open(path, "r") as file:
+            high_scores = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        high_scores = []
+
     player_found = False
+
     for entry in high_scores:
         if entry["name"] == player_name:
-            entry["score"] = score # Update the score if new score is higher
+            if score > entry["score"]:   # 🔥 important fix
+                entry["score"] = score
             player_found = True
             break
-        
-    # If player isn't in the high scores, add their score to the list
+
     if not player_found:
         high_scores.append({"name": player_name, "score": score})
 
-    with open("high_scores.json", "w") as file:
-        json.dump(high_scores, file, indent=4)  # Save updated high scores list
+    with open(path, "w") as file:
+        json.dump(high_scores, file, indent=4)
 
 
 # Function to display player name input
@@ -223,7 +240,7 @@ def get_player_name(window):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
+                sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and name.strip():  # If Enter is pressed and name is not empty
                     return name
@@ -290,7 +307,7 @@ def game_over(window, score, player_name):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN or (event.type == pygame.KEYDOWN and (event.key == pygame.K_SPACE or event.key == pygame.K_RETURN)):
                 return  # Retry the game
             
@@ -300,7 +317,7 @@ def homepage():
     window = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Flappy Bird by Manas")
     
-    pygame.mixer.music.load(os.path.join("assets", "homepage.wav"))  # Replace with actual file
+    pygame.mixer.music.load(resource_path(os.path.join("assets", "sounds", "homepage.wav")))  # Replace with actual file
     pygame.mixer.music.play(-1)  # Loop homepage music
 
     player_name = ""  # Initialize player name
@@ -326,7 +343,7 @@ def homepage():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_rect.collidepoint(event.pos):
                     player_name = get_player_name(window)  # Get player name
@@ -363,7 +380,7 @@ def display_high_scores(window):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 waiting_for_return = False  # Exit this loop and return to homepage
                 homepage()
@@ -390,7 +407,7 @@ def main(player_name):
                 pygame.quit()
                 return
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE or event.type == pygame.MOUSEBUTTONDOWN:
+            if (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE) or event.type == pygame.MOUSEBUTTONDOWN:
                 bird.jump()
 
         bird.move()
